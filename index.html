@@ -209,4 +209,46 @@ const DataSculptor = () => {
                     </div>
                 </div>
                 <div className="flex gap-3 mt-6">
-                    <button onClick={is
+                    <button onClick={isModify?handleSaveModify:handleSaveAdd} className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"><Save/>Enregistrer</button>
+                    <button onClick={()=>{isModify?setShowModifyPanel(false):setShowAddPanel(false)}} className="bg-gray-200 px-4 py-2 rounded-lg">Annuler</button>
+                </div>
+                {error && <div className="text-red-500 mt-3">{error}</div>}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-6">
+            <h1 className="text-3xl font-bold mb-6">Data Sculptor</h1>
+            <div className="flex gap-3 mb-6 flex-wrap">
+                <button onClick={()=>fileInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg"><Upload/>Charger fichier</button>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden"/>
+                <button onClick={()=>templateInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg"><FolderOpen/>Charger template</button>
+                <input type="file" ref={templateInputRef} onChange={handleLoadTemplate} className="hidden"/>
+                <button onClick={handleSaveTemplate} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg"><Save/>Sauvegarder template</button>
+                <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg"><Plus/>Ajouter KPI</button>
+            </div>
+            {successMessage && <div className="text-green-500 mb-3">{successMessage}</div>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {blocks.map(renderBlock)}
+            </div>
+
+            {/* Menu flottant */}
+            {selectedBlock!==null && (
+                <div className="fixed bottom-10 right-10 flex flex-col gap-3 z-50">
+                    <button onClick={handleModify} className="bg-blue-500 text-white p-3 rounded-full shadow-lg flex items-center justify-center"><Edit3/></button>
+                    <button onClick={handleDelete} className="bg-red-500 text-white p-3 rounded-full shadow-lg flex items-center justify-center"><Trash2/></button>
+                </div>
+            )}
+
+            {/* Panels */}
+            {showModifyPanel && renderFormPanel(true)}
+            {showAddPanel && renderFormPanel(false)}
+        </div>
+    );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<DataSculptor />);
+</script>
+</body>
+</html>
