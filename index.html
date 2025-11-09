@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Sculptor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Sculptor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div id="root"></div>
-
 <script type="text/babel">
 const { useState, useRef, useEffect } = React;
 
@@ -24,202 +23,202 @@ const Edit3 = () => <svg width="20" height="20" fill="none" stroke="currentColor
 const Plus = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const Save = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>;
 const FolderOpen = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>;
-const X = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 
-// Composant principal
+// Composant graphique
+const ChartBlock = ({data}) => {
+    const canvasRef = useRef(null);
+
+    useEffect(()=>{
+        if(!canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+        if(!ctx) return;
+
+        let chartData = {};
+        if(data.chart==='bar'){
+            chartData = {
+                type:'bar',
+                data:{
+                    labels: data.value.map(v=>v[0]),
+                    datasets:[{label:data.title, data:data.value.map(v=>v[1]), backgroundColor:'rgba(59,130,246,0.7)'}]
+                },
+                options:{responsive:true, plugins:{legend:{display:false}}}
+            };
+        }else if(data.chart==='pie'){
+            chartData = {
+                type:'pie',
+                data:{
+                    labels: data.value.map(v=>v[0]),
+                    datasets:[{label:data.title, data:data.value.map(v=>v[1]), backgroundColor:['#3B82F6','#F97316','#EF4444','#10B981','#8B5CF6','#F59E0B','#EC4899']}]
+                },
+                options:{responsive:true}
+            };
+        }else return;
+
+        const chartInstance = new Chart(ctx, chartData);
+        return ()=> chartInstance.destroy();
+    },[data]);
+
+    return <canvas ref={canvasRef} height="150"></canvas>;
+};
+
 const DataSculptor = () => {
-    const [file, setFile] = useState(null);
-    const [data, setData] = useState([]);
-    const [columns, setColumns] = useState([]);
-    const [blocks, setBlocks] = useState([]);
-    const [template, setTemplate] = useState(null);
-    const [selectedBlock, setSelectedBlock] = useState(null);
-    const [showModifyPanel, setShowModifyPanel] = useState(false);
-    const [showAddPanel, setShowAddPanel] = useState(false);
-    const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState(null);
+    const [file,setFile] = useState(null);
+    const [data,setData] = useState([]);
+    const [columns,setColumns] = useState([]);
+    const [blocks,setBlocks] = useState([]);
+    const [template,setTemplate] = useState(null);
+    const [showModifyPanel,setShowModifyPanel] = useState(false);
+    const [showAddPanel,setShowAddPanel] = useState(false);
+    const [selectedBlock,setSelectedBlock] = useState(null);
+    const [formData,setFormData] = useState({title:'',type:'number',column:'',operation:'sum',chart:'none'});
+    const [error,setError] = useState(null);
+    const [successMessage,setSuccessMessage] = useState(null);
     const fileInputRef = useRef(null);
     const templateInputRef = useRef(null);
-    const [formData, setFormData] = useState({
-        title: '',
-        type: 'number',
-        column: '',
-        operation: 'sum',
-        chart: 'none'
-    });
 
-    // Détection du type de colonne
-    const detectColumnType = (values) => {
-        const nonNull = values.filter(v => v !== null && v !== undefined && v !== '');
-        if (nonNull.length === 0) return 'text';
-        const numCount = nonNull.filter(v => !isNaN(parseFloat(v)) && isFinite(v)).length;
-        if (numCount / nonNull.length > 0.8) return 'number';
-        const uniqueValues = [...new Set(nonNull.map(v => String(v).toLowerCase()))];
-        if (uniqueValues.length < nonNull.length * 0.5 && uniqueValues.length < 20) return 'category';
+    const detectColumnType=(values)=>{
+        const nonNull = values.filter(v=>v!==null && v!==undefined && v!=='');
+        if(nonNull.length===0) return 'text';
+        const numCount = nonNull.filter(v=>!isNaN(parseFloat(v)) && isFinite(v)).length;
+        if(numCount/nonNull.length>0.8) return 'number';
+        const uniqueValues = [...new Set(nonNull.map(v=>String(v).toLowerCase()))];
+        if(uniqueValues.length<nonNull.length*0.5 && uniqueValues.length<20) return 'category';
         return 'text';
     };
 
-    // Calcul KPI
-    const calculateKPI = (form, sourceData) => {
-        const useData = sourceData || data;
-        const { column, operation, type } = form;
-        if (operation === 'count') return useData.length;
+    const generateKPIs=(dataRows,cols)=>{
+        let kpis=[];
+        let id=0;
+        cols.forEach(col=>{
+            const values = dataRows.map(r=>r[col]).filter(v=>v!==null && v!==undefined && v!=='');
+            const type = detectColumnType(values);
+            if(type==='number'){
+                const nums = values.map(v=>parseFloat(v));
+                kpis.push({id:id++,title:`Total ${col}`,type:'number',value:nums.reduce((a,b)=>a+b,0).toFixed(2),source:{column:col,operation:'sum'}});
+                kpis.push({id:id++,title:`Moyenne ${col}`,type:'number',value:(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2),source:{column:col,operation:'avg'}});
+            }
+            if(type==='category'){
+                const counts={};values.forEach(v=>counts[v]=(counts[v]||0)+1);
+                const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+                kpis.push({id:id++,title:`Distribution ${col}`,type:'list',value:sorted.slice(0,10),source:{column:col,operation:'distribution'},chart:'bar'});
+            }
+        });
+        kpis.push({id:id++,title:'Nombre total de lignes',type:'number',value:dataRows.length,source:{operation:'count'}});
+        return kpis;
+    };
 
-        const values = useData.map(row => row[column]).filter(v => v !== null && v !== undefined && v !== '');
-        if (type === 'number') {
-            const nums = values.map(v => parseFloat(v)).filter(n => !isNaN(n));
-            if (operation === 'sum') return nums.reduce((a,b)=>a+b,0).toFixed(2);
-            if (operation === 'avg') return (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2);
-            if (operation === 'max') return Math.max(...nums).toFixed(2);
-            if (operation === 'min') return Math.min(...nums).toFixed(2);
+    const calculateKPI=(form,sourceData=data)=>{
+        const {column,operation,type}=form;
+        if(operation==='count') return sourceData.length;
+        const values=sourceData.map(r=>r[column]).filter(v=>v!==null && v!==undefined && v!=='');
+        if(type==='number'){
+            const nums=values.map(v=>parseFloat(v)).filter(n=>!isNaN(n));
+            if(operation==='sum') return nums.reduce((a,b)=>a+b,0).toFixed(2);
+            if(operation==='avg') return (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2);
+            if(operation==='max') return Math.max(...nums).toFixed(2);
+            if(operation==='min') return Math.min(...nums).toFixed(2);
         }
-        if (type === 'list') {
-            const counts = {};
-            values.forEach(v => counts[v] = (counts[v] || 0)+1);
+        if(type==='list' || operation==='distribution'){
+            const counts={};values.forEach(v=>counts[v]=(counts[v]||0)+1);
             return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
         }
         return 0;
     };
 
-    const generateKPIs = (dataRows, cols) => {
-        let id=0;
-        const kpis=[];
-        cols.forEach(col=>{
-            const colType = detectColumnType(dataRows.map(r=>r[col]));
-            if(colType==='number'){
-                kpis.push({id:id++, title:`Total ${col}`, type:'number', value:calculateKPI({column:col,operation:'sum',type:'number'}), source:{column:col,operation:'sum'}, chart:'none'});
-                kpis.push({id:id++, title:`Moyenne ${col}`, type:'number', value:calculateKPI({column:col,operation:'avg',type:'number'}), source:{column:col,operation:'avg'}, chart:'none'});
-            }
-            if(colType==='category'){
-                kpis.push({id:id++, title:`Distribution ${col}`, type:'list', value:calculateKPI({column:col,operation:'distribution',type:'list'}), source:{column:col,operation:'distribution'}, chart:'bar'});
-            }
-        });
-        kpis.push({id:id++, title:'Nombre total de lignes', type:'number', value:dataRows.length, source:{operation:'count'}, chart:'none'});
-        return kpis;
-    };
-
-    const applyTemplateToData = (templateBlocks,newData)=>{
+    const applyTemplateToData=(templateBlocks,newData)=>{
         return templateBlocks.map(b=>({...b,value:calculateKPI({...b.source,type:b.type},newData)}));
     };
 
-    // Upload fichier
     const handleFileUpload=(e)=>{
-        const uploadedFile=e.target.files[0];
-        if(!uploadedFile) return;
-        setError(null); setSuccessMessage(null);
-
-        const reader = new FileReader();
+        const uploadedFile=e.target.files[0];if(!uploadedFile) return;
+        setError(null);setSuccessMessage(null);
+        const reader=new FileReader();
         reader.onload=(event)=>{
             try{
-                const fileData = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(fileData,{type:'array'});
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                if(jsonData.length===0){ setError("Fichier vide"); return;}
+                const wb = XLSX.read(new Uint8Array(event.target.result), {type:'array'});
+                const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                if(jsonData.length===0){setError("Fichier vide");return;}
                 const cols=Object.keys(jsonData[0]);
-                setData(jsonData); setColumns(cols); setFile(uploadedFile);
-
+                setData(jsonData);setColumns(cols);setFile(uploadedFile);
                 if(template){
                     const newBlocks = applyTemplateToData(template.blocks,jsonData);
-                    setBlocks(newBlocks);
-                    setSuccessMessage(`✅ Template appliqué ! ${newBlocks.length} KPIs recalculés.`);
+                    setBlocks(newBlocks);setSuccessMessage(`✅ Template appliqué !`);
                 }else{
-                    const generatedKPIs=generateKPIs(jsonData,cols);
+                    const generatedKPIs = generateKPIs(jsonData,cols);
                     setBlocks(generatedKPIs);
                 }
-            }catch(err){
-                setError("Erreur : "+err.message);
-            }
+            }catch(err){setError(err.message);}
         };
         reader.readAsArrayBuffer(uploadedFile);
     };
 
-    // Upload template
+    const handleAdd=()=>{
+        setFormData({title:'',type:'number',column:columns[0]||'',operation:'sum',chart:'none'});
+        setShowAddPanel(true);
+    };
+
+    const handleModify=(id)=>{
+        const b = blocks.find(b=>b.id===id);if(!b) return;
+        setSelectedBlock(id);
+        setFormData({title:b.title,type:b.type,column:b.source?.column||columns[0]||'',operation:b.source?.operation||'sum',chart:b.chart||'none'});
+        setShowModifyPanel(true);
+    };
+
+    const handleSaveAdd=()=>{
+        if(!formData.title || !formData.column){setError("Titre et colonne requis");return;}
+        const value=calculateKPI(formData);
+        const newBlock={id:blocks.length?Math.max(...blocks.map(b=>b.id))+1:0,...formData,value,source:{column:formData.column,operation:formData.operation}};
+        setBlocks([...blocks,newBlock]);setShowAddPanel(false);setError(null);
+    };
+
+    const handleSaveModify=()=>{
+        if(!formData.title || !formData.column){setError("Titre et colonne requis");return;}
+        const value=calculateKPI(formData);
+        const newBlock={id:selectedBlock,...formData,value,source:{column:formData.column,operation:formData.operation}};
+        setBlocks(blocks.map(b=>b.id===selectedBlock?newBlock:b));setShowModifyPanel(false);setSelectedBlock(null);setError(null);
+    };
+
+    const handleDelete=(id)=>{
+        setBlocks(blocks.filter(b=>b.id!==id));
+    };
+
+    const handleSaveTemplate=()=>{
+        const templateData={name:`Template ${new Date().toLocaleDateString()}`,timestamp:new Date().toISOString(),blocks:blocks.map(b=>({id:b.id,title:b.title,type:b.type,source:b.source,chart:b.chart})),expectedColumns:columns};
+        setTemplate(templateData);
+        const blob = new Blob([JSON.stringify(templateData,null,2)],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download='dashboard-template.json';a.click();
+        setSuccessMessage('✅ Template sauvegardé !');setTimeout(()=>setSuccessMessage(null),5000);
+    };
+
     const handleLoadTemplate=(e)=>{
-        const file=e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
+        const file=e.target.files[0];if(!file) return;
+        const reader=new FileReader();
         reader.onload=(event)=>{
             try{
                 const t=JSON.parse(event.target.result);
                 setTemplate(t);
-                if(data.length>0){
-                    const newBlocks = applyTemplateToData(t.blocks,data);
-                    setBlocks(newBlocks);
-                }
-                setSuccessMessage('✅ Template chargé !');
-                setTimeout(()=>setSuccessMessage(null),5000);
+                if(data.length>0)setBlocks(applyTemplateToData(t.blocks,data));
+                setSuccessMessage('✅ Template chargé !');setTimeout(()=>setSuccessMessage(null),5000);
             }catch(err){setError("Erreur template");}
         };
         reader.readAsText(file);
     };
 
-    // Sauvegarde template
-    const handleSaveTemplate=()=>{
-        const t={name:`Template ${new Date().toLocaleDateString()}`, timestamp:new Date().toISOString(), blocks:blocks.map(b=>({id:b.id,title:b.title,type:b.type,source:b.source,chart:b.chart})), expectedColumns:columns};
-        setTemplate(t);
-        const blob = new Blob([JSON.stringify(t,null,2)],{type:'application/json'});
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement('a'); a.href=url; a.download='template.json'; a.click();
-        setSuccessMessage('✅ Template sauvegardé !'); setTimeout(()=>setSuccessMessage(null),5000);
-    };
-
-    // Ajouter / Modifier / Supprimer
-    const handleDelete=()=>{if(selectedBlock!==null){setBlocks(blocks.filter(b=>b.id!==selectedBlock)); setSelectedBlock(null);}};
-    const handleModify=()=>{
-        const b=blocks.find(b=>b.id===selectedBlock); if(!b) return;
-        setFormData({title:b.title,type:b.type,column:b.source?.column||columns[0]||'',operation:b.source?.operation||'sum', chart:b.chart||'none'});
-        setShowModifyPanel(true);
-    };
-    const handleSaveModify=()=>{
-        if(!formData.title || !formData.column){setError("Titre et colonne requis"); return;}
-        const value=calculateKPI(formData);
-        const newBlock={id:selectedBlock,title:formData.title,type:formData.type,value,value,source:{column:formData.column,operation:formData.operation}, chart:formData.chart};
-        setBlocks(blocks.map(b=>b.id===selectedBlock?newBlock:b));
-        setShowModifyPanel(false); setSelectedBlock(null); setError(null);
-    };
-    const handleAdd=()=>{
-        setFormData({title:'',type:'number',column:columns[0]||'',operation:'sum',chart:'none'});
-        setShowAddPanel(true);
-    };
-    const handleSaveAdd=()=>{
-        if(!formData.title || !formData.column){setError("Titre et colonne requis"); return;}
-        const value=calculateKPI(formData);
-        const newBlock={id:blocks.length>0?Math.max(...blocks.map(b=>b.id))+1:0,title:formData.title,type:formData.type,value:value,source:{column:formData.column,operation:formData.operation}, chart:formData.chart};
-        setBlocks([...blocks,newBlock]);
-        setShowAddPanel(false); setError(null);
-    };
-
-    // Render KPI avec Chart.js
     const renderBlock=(b)=>{
-        const isSelected=selectedBlock===b.id;
-        return(
-            <div key={b.id} onClick={()=>setSelectedBlock(b.id)} className={`bg-white p-6 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${isSelected?'border-blue-500 shadow-lg scale-105':'border-gray-200'}`}>
+        return (
+            <div key={b.id} className="relative bg-white p-6 rounded-lg border border-gray-200 hover:shadow-lg">
+                <div className="absolute top-2 right-2 flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
+                    <button onClick={()=>handleModify(b.id)} className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2"><Edit3/></button>
+                    <button onClick={()=>handleDelete(b.id)} className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2"><Trash2/></button>
+                </div>
                 <div className="text-sm text-gray-500 mb-2">{b.title}</div>
                 {b.type==='number' && <div className="text-3xl font-bold text-gray-800">{b.value}</div>}
-                {b.type==='list' && (b.chart==='bar' || b.chart==='pie') && <ChartBlock data={b} />}
+                {b.type==='list' && (b.chart==='bar'||b.chart==='pie') && <ChartBlock data={b}/>}
             </div>
         );
     };
 
-    // Chart.js component
-    const ChartBlock=({data})=>{
-        const canvasRef = useRef(null);
-        useEffect(()=>{
-            const ctx = canvasRef.current.getContext('2d');
-            const labels=data.value.map(v=>v[0]);
-            const values=data.value.map(v=>v[1]);
-            const chart = new Chart(ctx,{
-                type:data.chart==='bar'?'bar':'pie',
-                data:{labels, datasets:[{label:data.title,data:values, backgroundColor: data.chart==='bar'? '#3b82f6' : ['#3b82f6','#f97316','#10b981','#facc15','#ef4444','#8b5cf6']}]},
-                options:{responsive:true, maintainAspectRatio:false}
-            });
-            return ()=>{chart.destroy();};
-        },[data]);
-        return <canvas ref={canvasRef} className="w-full h-48" />;
-    };
-
-    // Panel ajout/modification
     const renderFormPanel=(isModify)=>(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-8 max-w-lg w-full">
@@ -227,7 +226,7 @@ const DataSculptor = () => {
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-2">Titre</label>
-                        <input type="text" value={formData.title} onChange={e=>setFormData({...formData,title:e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                        <input type="text" value={formData.title} onChange={e=>setFormData({...formData,title:e.target.value})} className="w-full px-3 py-2 border rounded-lg"/>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Type</label>
@@ -259,49 +258,44 @@ const DataSculptor = () => {
                             <select value={formData.chart} onChange={e=>setFormData({...formData,chart:e.target.value})} className="w-full px-3 py-2 border rounded-lg">
                                 <option value="bar">Barres</option>
                                 <option value="pie">Camembert</option>
+                                <option value="none">Aucun</option>
                             </select>
                         </div>
                     )}
                 </div>
                 <div className="flex gap-3 mt-6">
-                    <button onClick={isModify?handleSaveModify:handleSaveAdd} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2"><Save/>Enregistrer</button>
-                    <button onClick={()=>{isModify?setShowModifyPanel(false):setShowAddPanel(false)}} className="flex-1 bg-gray-200 px-4 py-3 rounded-lg">Annuler</button>
+                    <button onClick={isModify?handleSaveModify:handleSaveAdd} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">OK</button>
+                    <button onClick={()=>isModify?setShowModifyPanel(false):setShowAddPanel(false)} className="flex-1 bg-gray-300 px-4 py-3 rounded-lg">Annuler</button>
                 </div>
-                {error && <div className="text-red-500 mt-3">{error}</div>}
             </div>
         </div>
     );
 
-    return(
-        <div className="min-h-screen bg-gray-50 p-6">
-            <h1 className="text-3xl font-bold mb-6">Data Sculptor</h1>
-            <div className="flex gap-3 mb-6 flex-wrap">
-                <button onClick={()=>fileInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg"><Upload/>Upload fichier</button>
-                <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".csv,.xlsx"/>
-                
-                <button onClick={()=>templateInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg"><FolderOpen/>Upload template</button>
-                <input type="file" ref={templateInputRef} className="hidden" onChange={handleLoadTemplate} accept=".json"/>
-
-                <button onClick={handleSaveTemplate} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg"><Save/>Sauvegarder template</button>
-                <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg"><Plus/>Ajouter KPI</button>
-                {selectedBlock!==null && <>
-                    <button onClick={handleModify} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg"><Edit3/>Modifier</button>
-                    <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg"><Trash2/>Supprimer</button>
-                </>}
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-8">
+            <div className="max-w-7xl mx-auto">
+                <h1 className="text-3xl font-bold mb-4">Data Sculptor</h1>
+                <div className="flex gap-4 mb-4">
+                    <button onClick={()=>fileInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg"><Upload/>Upload fichier</button>
+                    <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} accept=".csv,.xlsx"/>
+                    <button onClick={()=>templateInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg"><FolderOpen/>Charger template</button>
+                    <input ref={templateInputRef} type="file" className="hidden" onChange={handleLoadTemplate} accept=".json"/>
+                    <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg"><Plus/>Ajouter KPI</button>
+                    <button onClick={handleSaveTemplate} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg"><Save/>Sauvegarder template</button>
+                </div>
+                {error && <div className="text-red-600 mb-4">{error}</div>}
+                {successMessage && <div className="text-green-600 mb-4">{successMessage}</div>}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {blocks.map(renderBlock)}
+                </div>
             </div>
-            {successMessage && <div className="bg-green-100 text-green-700 px-4 py-2 rounded mb-4">{successMessage}</div>}
-            {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {blocks.map(renderBlock)}
-            </div>
-
-            {showModifyPanel && renderFormPanel(true)}
             {showAddPanel && renderFormPanel(false)}
+            {showModifyPanel && renderFormPanel(true)}
         </div>
     );
 };
 
-ReactDOM.render(<DataSculptor />, document.getElementById('root'));
+ReactDOM.createRoot(document.getElementById('root')).render(<DataSculptor/>);
 </script>
 </body>
 </html>
