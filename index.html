@@ -1,272 +1,212 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Sculptor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Sculptor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div id="root"></div>
-
 <script type="text/babel">
 const { useState, useRef } = React;
 
-// --- ICONS ---
-const Upload = () => <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>;
-const Trash2 = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
-const Edit3 = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
-const Plus = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const Save = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>;
-const FolderOpen = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>;
-const X = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+// ---- ICONS ----
+const Upload=()=> <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>;
+const Trash2=()=> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+const Edit3=()=> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
+const Plus=()=> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const Save=()=> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>;
+const FolderOpen=()=> <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>;
 
-// --- COMPONENT ---
+// ---- COMPONENT ----
 const DataSculptor = () => {
-    const [file, setFile] = useState(null);
-    const [data, setData] = useState([]);
-    const [columns, setColumns] = useState([]);
-    const [blocks, setBlocks] = useState([]);
-    const [template, setTemplate] = useState(null);
-    const [selectedBlock, setSelectedBlock] = useState(null);
-    const [showModifyPanel, setShowModifyPanel] = useState(false);
-    const [showAddPanel, setShowAddPanel] = useState(false);
-    const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState(null);
+    const [file,setFile] = useState(null);
+    const [data,setData] = useState([]);
+    const [columns,setColumns] = useState([]);
+    const [blocks,setBlocks] = useState([]);
+    const [template,setTemplate] = useState(null);
+    const [selectedBlock,setSelectedBlock] = useState(null);
+    const [showModifyPanel,setShowModifyPanel] = useState(false);
+    const [showAddPanel,setShowAddPanel] = useState(false);
+    const [error,setError] = useState(null);
+    const [successMessage,setSuccessMessage] = useState(null);
 
-    const fileInputRef = useRef(null);
-    const templateInputRef = useRef(null);
+    const fileInputRef=useRef(null);
+    const templateInputRef=useRef(null);
 
-    const [formData, setFormData] = useState({title:'',type:'number',column:'',operation:'sum'});
+    const [formData,setFormData] = useState({
+        title:'', type:'number', column:'', operation:'sum', chartType:'none'
+    });
 
-    // --- HELPERS ---
-    const detectColumnType = (values)=>{
-        const nonNull = values.filter(v=>v!==null&&v!==undefined&&v!=='');
+    // ---- Helpers ----
+    const detectColumnType=(values)=>{
+        const nonNull=values.filter(v=>v!==null&&v!==undefined&&v!=='');
         if(nonNull.length===0) return 'text';
-        const numCount = nonNull.filter(v=>!isNaN(parseFloat(v)) && isFinite(v)).length;
+        const numCount=nonNull.filter(v=>!isNaN(parseFloat(v)) && isFinite(v)).length;
         if(numCount/nonNull.length>0.8) return 'number';
-        const uniqueValues = [...new Set(nonNull.map(v=>String(v).toLowerCase()))];
+        const uniqueValues=[...new Set(nonNull.map(v=>String(v).toLowerCase()))];
         if(uniqueValues.length<nonNull.length*0.5 && uniqueValues.length<20) return 'category';
         return 'text';
     };
 
-    const generateKPIs = (dataRows, cols)=>{
-        const kpis=[];
-        let id=0;
-        const columnTypes = cols.map(col=>({name:col,type:detectColumnType(dataRows.map(r=>r[col]))}));
-
+    const generateKPIs=(dataRows,cols)=>{
+        const kpis=[]; let id=0;
+        const columnTypes=cols.map(col=>({name:col,type:detectColumnType(dataRows.map(r=>r[col]))}));
         columnTypes.forEach(col=>{
-            const values = dataRows.map(r=>r[col.name]).filter(v=>v!==null&&v!==undefined&&v!=='');
+            const values=dataRows.map(r=>r[col.name]).filter(v=>v!==null&&v!==undefined&&v!=='');
             if(col.type==='number'){
-                const nums = values.map(v=>parseFloat(v));
-                kpis.push({id:id++,title:`Total ${col.name}`,type:'number',value:nums.reduce((a,b)=>a+b,0).toFixed(2),source:{column:col.name,operation:'sum'}});
-                kpis.push({id:id++,title:`Moyenne ${col.name}`,type:'number',value:(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2),source:{column:col.name,operation:'avg'}});
+                const nums=values.map(v=>parseFloat(v));
+                kpis.push({id:id++,title:`Total ${col.name}`,type:'number',value:nums.reduce((a,b)=>a+b,0).toFixed(2),source:{column:col.name,operation:'sum'}, chartType:'none'});
+                kpis.push({id:id++,title:`Moyenne ${col.name}`,type:'number',value:(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2),source:{column:col.name,operation:'avg'}, chartType:'none'});
             }
             if(col.type==='category'){
-                const counts={};
-                values.forEach(v=>counts[v]=(counts[v]||0)+1);
-                const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-                kpis.push({id:id++,title:`Distribution ${col.name}`,type:'list',value:sorted.slice(0,10),source:{column:col.name,operation:'distribution'}});
+                const counts={}; values.forEach(v=>counts[v]=(counts[v]||0)+1);
+                const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+                kpis.push({id:id++,title:`Distribution ${col.name}`,type:'list',value:sorted.slice(0,10),source:{column:col.name,operation:'distribution'}, chartType:'bar'});
             }
         });
-
-        kpis.push({id:id++,title:'Nombre total de lignes',type:'number',value:dataRows.length,source:{operation:'count'}});
+        kpis.push({id:id++,title:'Nombre total de lignes',type:'number',value:dataRows.length,source:{operation:'count'}, chartType:'none'});
         return kpis;
     };
 
-    const calculateKPI = (form, sourceData)=>{
-        const useData = sourceData||data;
-        const {column,operation,type} = form;
+    const calculateKPI=(form,sourceData)=>{
+        const useData=sourceData||data;
+        const {column,operation,type}=form;
         if(operation==='count') return useData.length;
-
-        const values = useData.map(r=>r[column]).filter(v=>v!==null&&v!==undefined&&v!=='');
+        const values=useData.map(r=>r[column]).filter(v=>v!==null&&v!==undefined&&v!=='');
         if(type==='number'||type==='percentage'){
-            const nums = values.map(v=>parseFloat(v)).filter(n=>!isNaN(n));
-            let result = 0;
-            if(operation==='sum') result=nums.reduce((a,b)=>a+b,0);
-            else if(operation==='avg') result=nums.reduce((a,b)=>a+b,0)/nums.length;
-            else if(operation==='max') result=Math.max(...nums);
-            else if(operation==='min') result=Math.min(...nums);
-            return result.toFixed(2);
+            const nums=values.map(v=>parseFloat(v)).filter(n=>!isNaN(n));
+            if(operation==='sum') return nums.reduce((a,b)=>a+b,0).toFixed(2);
+            if(operation==='avg') return (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2);
+            if(operation==='max') return Math.max(...nums).toFixed(2);
+            if(operation==='min') return Math.min(...nums).toFixed(2);
         }
         if(type==='list'||operation==='distribution'){
-            const counts={};
-            values.forEach(v=>counts[v]=(counts[v]||0)+1);
+            const counts={}; values.forEach(v=>counts[v]=(counts[v]||0)+1);
             return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
         }
         return 0;
     };
 
     const applyTemplateToData=(templateBlocks,newData)=>{
-        return templateBlocks.map(block=>({...block,value:calculateKPI({column:block.source?.column,operation:block.source?.operation,type:block.type},newData)}));
+        return templateBlocks.map(block=>({
+            ...block,
+            value:calculateKPI({column:block.source?.column,operation:block.source?.operation,type:block.type},newData)
+        }));
     };
 
-    // --- HANDLERS ---
+    // ---- Handlers ----
     const handleFileUpload=(e)=>{
-        const uploadedFile = e.target.files[0];
-        if(!uploadedFile) return;
+        const uploadedFile=e.target.files[0]; if(!uploadedFile) return;
         setError(null); setSuccessMessage(null);
-
-        const reader = new FileReader();
-        reader.onload = (event)=>{
+        const reader=new FileReader();
+        reader.onload=(event)=>{
             try{
-                const fileData = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(fileData,{type:'array'});
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                if(jsonData.length===0){setError("Le fichier est vide"); return;}
-                const cols = Object.keys(jsonData[0]);
-                setData(jsonData);
-                setColumns(cols);
-                setFile(uploadedFile);
-
-                if(template){
-                    const newBlocks = applyTemplateToData(template.blocks,jsonData);
-                    setBlocks(newBlocks);
-                    setSuccessMessage(`✅ Template appliqué ! ${newBlocks.length} KPIs recalculés.`);
-                } else {
-                    const generatedKPIs = generateKPIs(jsonData,cols);
-                    setBlocks(generatedKPIs);
-                }
-            }catch(err){setError("Erreur : "+err.message);}
+                const fileData=new Uint8Array(event.target.result);
+                const workbook=XLSX.read(fileData,{type:'array'});
+                const firstSheet=workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData=XLSX.utils.sheet_to_json(firstSheet);
+                if(jsonData.length===0){ setError("Le fichier est vide"); return; }
+                const cols=Object.keys(jsonData[0]);
+                setData(jsonData); setColumns(cols); setFile(uploadedFile);
+                if(template){ const newBlocks=applyTemplateToData(template.blocks,jsonData); setBlocks(newBlocks); setSuccessMessage(`✅ Template appliqué ! ${newBlocks.length} KPIs recalculés.`);}
+                else{ setBlocks(generateKPIs(jsonData,cols)); }
+            }catch(err){ setError("Erreur : "+err.message); }
         };
         reader.readAsArrayBuffer(uploadedFile);
     };
 
     const handleLoadTemplate=(e)=>{
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
+        const file=e.target.files[0]; if(!file) return;
+        const reader=new FileReader();
         reader.onload=(event)=>{
             try{
-                const templateData = JSON.parse(event.target.result);
+                const templateData=JSON.parse(event.target.result);
                 setTemplate(templateData);
-                if(data.length>0){
-                    const newBlocks = applyTemplateToData(templateData.blocks,data);
-                    setBlocks(newBlocks);
-                }
-                setSuccessMessage('✅ Template chargé !');
-                setTimeout(()=>setSuccessMessage(null),5000);
-            }catch(err){setError("Erreur template");}
+                if(data.length>0){ setBlocks(applyTemplateToData(templateData.blocks,data)); }
+                setSuccessMessage('✅ Template chargé !'); setTimeout(()=>setSuccessMessage(null),5000);
+            }catch(err){ setError("Erreur template"); }
         };
         reader.readAsText(file);
     };
 
-    const handleAdd=()=>{
-        setFormData({title:'',type:'number',column:columns[0]||'',operation:'sum'});
-        setShowAddPanel(true);
+    const handleDelete=()=>{ if(selectedBlock!==null){ setBlocks(blocks.filter(b=>b.id!==selectedBlock)); setSelectedBlock(null); } };
+    const handleModify=()=>{ if(selectedBlock===null) return; const block=blocks.find(b=>b.id===selectedBlock); if(!block) return; setFormData({title:block.title,type:block.type,column:block.source?.column||columns[0]||'',operation:block.source?.operation||'sum',chartType:block.chartType||'none'}); setShowModifyPanel(true); };
+    const handleSaveModify=()=>{ if(!formData.title||!formData.column){ setError("Titre et colonne requis"); return; } const value=calculateKPI(formData); const newBlock={id:selectedBlock,title:formData.title,type:formData.type,value,value,source:{column:formData.column,operation:formData.operation}, chartType:formData.chartType}; setBlocks(blocks.map(b=>b.id===selectedBlock?newBlock:b)); setShowModifyPanel(false); setSelectedBlock(null); setError(null); };
+    const handleAdd=()=>{ setFormData({title:'',type:'number',column:columns[0]||'',operation:'sum',chartType:'none'}); setShowAddPanel(true); };
+    const handleSaveAdd=()=>{ if(!formData.title||!formData.column){ setError("Titre et colonne requis"); return; } const value=calculateKPI(formData); const newBlock={id:blocks.length>0?Math.max(...blocks.map(b=>b.id))+1:0,title:formData.title,type:formData.type,value:value,source:{column:formData.column,operation:formData.operation}, chartType:formData.chartType}; setBlocks([...blocks,newBlock]); setShowAddPanel(false); setError(null); };
+    const handleSaveTemplate=()=>{ const templateData={name:`Template ${new Date().toLocaleDateString()}`,timestamp:new Date().toISOString(),blocks:blocks.map(b=>({id:b.id,title:b.title,type:b.type,source:b.source,chartType:b.chartType})),expectedColumns:columns}; setTemplate(templateData); const blob=new Blob([JSON.stringify(templateData,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='dashboard-template.json'; a.click(); setSuccessMessage('✅ Template sauvegardé !'); setTimeout(()=>setSuccessMessage(null),5000); };
+
+    // ---- Chart Rendering ----
+    const renderChart=(block)=>{
+        if(block.chartType==='none') return null;
+        const chartId=`chart-${block.id}`;
+        setTimeout(()=>{
+            const ctx=document.getElementById(chartId); if(!ctx) return;
+            const existingChart=Chart.getChart(ctx); if(existingChart) existingChart.destroy();
+            let labels=[], dataPoints=[];
+            if(block.type==='list'){ labels=block.value.map(([k,v])=>k); dataPoints=block.value.map(([k,v])=>v); } 
+            else{ labels=[block.title]; dataPoints=[parseFloat(block.value)]; }
+            if(block.chartType==='bar'){ new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:block.title,data:dataPoints,backgroundColor:'rgba(59,130,246,0.7)'}]},options:{responsive:true,plugins:{legend:{display:false}}}}); }
+            if(block.chartType==='pie'){ new Chart(ctx,{type:'pie',data:{labels,datasets:[{data:dataPoints,backgroundColor:['#3b82f6','#f97316','#10b981','#f43f5e','#8b5cf6','#facc15','#14b8a6','#f472b6','#22d3ee','#e11d48']}]},options:{responsive:true}}); }
+        },100);
+        return <canvas id={chartId} className="mt-3"></canvas>;
     };
 
-    const handleSaveAdd=()=>{
-        if(!formData.title||!formData.column){setError("Titre et colonne requis"); return;}
-        const value = calculateKPI(formData);
-        const newBlock = {id:blocks.length>0?Math.max(...blocks.map(b=>b.id))+1:0,title:formData.title,type:formData.type,value:value,source:{column:formData.column,operation:formData.operation}};
-        setBlocks([...blocks,newBlock]);
-        setShowAddPanel(false); setError(null);
-    };
-
-    const handleModify=()=>{
-        const block = blocks.find(b=>b.id===selectedBlock);
-        if(!block) return;
-        setFormData({title:block.title,type:block.type,column:block.source?.column||columns[0]||'',operation:block.source?.operation||'sum'});
-        setShowModifyPanel(true);
-    };
-
-    const handleSaveModify=()=>{
-        if(!formData.title||!formData.column){setError("Titre et colonne requis"); return;}
-        const value = calculateKPI(formData);
-        const newBlock = {id:selectedBlock,title:formData.title,type:formData.type,value:value,source:{column:formData.column,operation:formData.operation}};
-        setBlocks(blocks.map(b=>b.id===selectedBlock?newBlock:b));
-        setShowModifyPanel(false); setSelectedBlock(null); setError(null);
-    };
-
-    const handleDelete=()=>{
-        if(selectedBlock!==null){setBlocks(blocks.filter(b=>b.id!==selectedBlock)); setSelectedBlock(null);}
-    };
-
-    const handleSaveTemplate=()=>{
-        const templateData = {name:`Template ${new Date().toLocaleDateString()}`,timestamp:new Date().toISOString(),blocks:blocks.map(b=>({id:b.id,title:b.title,type:b.type,source:b.source})),expectedColumns:columns};
-        setTemplate(templateData);
-        const blob = new Blob([JSON.stringify(templateData,null,2)],{type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download='dashboard-template.json'; a.click();
-        setSuccessMessage('✅ Template sauvegardé !'); setTimeout(()=>setSuccessMessage(null),5000);
-    };
-
-    // --- RENDER BLOCKS ---
     const renderBlock=(block)=>{
-        const isSelected = selectedBlock===block.id;
-        if(block.type==='number'){
-            return (<div key={block.id} onClick={()=>setSelectedBlock(block.id)} className={`bg-white p-6 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${isSelected?'border-blue-500 shadow-lg scale-105':'border-gray-200'}`}><div className="text-sm text-gray-500 mb-2">{block.title}</div><div className="text-3xl font-bold text-gray-800">{block.value}</div></div>);
-        }
-        if(block.type==='list'){
-            return (<div key={block.id} onClick={()=>setSelectedBlock(block.id)} className={`bg-white p-6 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${isSelected?'border-blue-500 shadow-lg scale-105':'border-gray-200'}`}><div className="text-sm text-gray-500 mb-3">{block.title}</div>{block.value.slice(0,8).map(([key,val],i)=>{const maxVal=Math.max(...block.value.map(v=>parseFloat(v[1]))); const width=(parseFloat(val)/maxVal)*100; return(<div key={i} className="mb-3"><div className="flex justify-between text-xs mb-1"><span className="text-gray-600 truncate max-w-[120px]">{key}</span><span className="font-medium text-gray-800">{val}</span></div><div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{width:`${width}%`}}/></div></div>);})}</div>);
-        }
+        const isSelected=selectedBlock===block.id;
+        return (
+            <div key={block.id} onClick={()=>setSelectedBlock(block.id)} className={`bg-white p-6 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${isSelected?'border-blue-500 shadow-lg scale-105':'border-gray-200'}`}>
+                <div className="text-sm text-gray-500 mb-2">{block.title}</div>
+                {(block.type==='number'||block.type==='percentage') && <div className="text-3xl font-bold text-gray-800">{block.value}</div>}
+                {block.type==='list' && block.value.slice(0,8).map(([key,val],i)=>{
+                    const maxVal=Math.max(...block.value.map(v=>parseFloat(v[1])));
+                    const width=(parseFloat(val)/maxVal)*100;
+                    return (<div key={i} className="mb-3">
+                        <div className="flex justify-between text-xs mb-1"><span className="text-gray-600 truncate max-w-[120px]">{key}</span><span className="font-medium text-gray-800">{val}</span></div>
+                        <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{width:`${width}%`}}/></div>
+                    </div>);
+                })}
+                {renderChart(block)}
+            </div>
+        );
     };
 
-    // --- RENDER FORM PANEL ---
     const renderFormPanel=(isModify)=>(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl p-8 max-w-lg w-full">
                 <h2 className="text-2xl font-bold mb-6">{isModify?'Modifier':'Ajouter'}</h2>
                 <div className="space-y-4">
-                    <div><label className="block text-sm font-medium mb-2">Titre</label><input type="text" value={formData.title} onChange={(e)=>setFormData({...formData,title:e.target.value})} className="w-full px-3 py-2 border rounded-lg"/></div>
-                    <div><label className="block text-sm font-medium mb-2">Type</label><select value={formData.type} onChange={(e)=>setFormData({...formData,type:e.target.value})} className="w-full px-3 py-2 border rounded-lg"><option value="number">Nombre</option><option value="list">Liste</option></select></div>
-                    <div><label className="block text-sm font-medium mb-2">Colonne</label><select value={formData.column} onChange={(e)=>setFormData({...formData,column:e.target.value})} className="w-full px-3 py-2 border rounded-lg">{columns.map(col=><option key={col} value={col}>{col}</option>)}</select></div>
-                    <div><label className="block text-sm font-medium mb-2">Opération</label><select value={formData.operation} onChange={(e)=>setFormData({...formData,operation:e.target.value})} className="w-full px-3 py-2 border rounded-lg"><option value="sum">Somme</option><option value="avg">Moyenne</option><option value="max">Maximum</option><option value="min">Minimum</option><option value="count">Comptage</option><option value="distribution">Distribution</option></select></div>
+                    <div><label className="block text-sm font-medium mb-2">Titre</label><input type="text" value={formData.title} onChange={e=>setFormData({...formData,title:e.target.value})} className="w-full px-3 py-2 border rounded-lg"/></div>
+                    <div><label className="block text-sm font-medium mb-2">Type</label>
+                        <select value={formData.type} onChange={e=>setFormData({...formData,type:e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                            <option value="number">Nombre</option>
+                            <option value="list">Liste</option>
+                        </select>
+                    </div>
+                    <div><label className="block text-sm font-medium mb-2">Colonne</label>
+                        <select value={formData.column} onChange={e=>setFormData({...formData,column:e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                            {columns.map(c=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                    <div><label className="block text-sm font-medium mb-2">Opération</label>
+                        <select value={formData.operation} onChange={e=>setFormData({...formData,operation:e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                            <option value="sum">Somme</option><option value="avg">Moyenne</option><option value="max">Maximum</option><option value="min">Minimum</option><option value="count">Comptage</option><option value="distribution">Distribution</option>
+                        </select>
+                    </div>
+                    <div><label className="block text-sm font-medium mb-2">Graphique</label>
+                        <select value={formData.chartType} onChange={e=>setFormData({...formData,chartType:e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                            <option value="none">Aucun</option>
+                            <option value="bar">Barres</option>
+                            <option value="pie">Camembert</option>
+                        </select>
+                    </div>
                 </div>
                 <div className="flex gap-3 mt-6">
-                    <button onClick={isModify?handleSaveModify:handleSaveAdd} className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">OK</button>
-                    <button onClick={()=>{isModify?setShowModifyPanel(false):setShowAddPanel(false);}} className="flex-1 bg-gray-300 px-4 py-3 rounded-lg">Annuler</button>
-                </div>
-            </div>
-        </div>
-    );
-
-    // --- MAIN RENDER ---
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-8">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold">Data Sculptor</h1>
-                        <p className="text-gray-600">{file?.name||"Aucun fichier"} • {blocks.length} blocs</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={handleSaveTemplate} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"><Save/> Template</button>
-                        <button onClick={()=>fileInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"><Upload/> Upload Data</button>
-                        <button onClick={()=>templateInputRef.current.click()} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"><FolderOpen/> Upload Template</button>
-                        <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"><Plus/> Ajouter</button>
-                    </div>
-                    <input type="file" accept=".xlsx,.csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload}/>
-                    <input type="file" accept=".json" ref={templateInputRef} className="hidden" onChange={handleLoadTemplate}/>
-                </div>
-
-                {error && <div className="text-red-600 mb-4">{error}</div>}
-                {successMessage && <div className="text-green-600 mb-4">{successMessage}</div>}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {blocks.map(renderBlock)}
-                </div>
-
-                {selectedBlock!==null && <div className="fixed right-4 top-1/2 transform -translate-y-1/2 bg-white p-4 rounded-xl shadow-lg flex flex-col gap-3 z-50">
-                    <button onClick={handleModify} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"><Edit3/> Modifier</button>
-                    <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><Trash2/> Supprimer</button>
-                </div>}
-
-                {showModifyPanel && renderFormPanel(true)}
-                {showAddPanel && renderFormPanel(false)}
-            </div>
-        </div>
-    );
-};
-
-// --- RENDER APP ---
-ReactDOM.render(<DataSculptor/>,document.getElementById('root'));
-</script>
-</body>
-</html>
+                    <button onClick={is
